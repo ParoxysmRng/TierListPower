@@ -217,6 +217,7 @@ function render() {
       n.innerText = cur.n; if(a.dataset.k !== cur.i) { a.dataset.k = cur.i; loadSmartImg(a, cur.i, cur.n); }
       t.style.display = 'block'; t.style.background = m.color; t.innerText = bySlot[i].map(x=>x.pseudo).join(', ');
     } else { n.innerText = '---'; a.dataset.k = ''; }
+    
   }
 
   const vb = document.getElementById('votes');
@@ -233,13 +234,16 @@ function render() {
     });
     if(last !== st.idx) {
       last = st.idx; const cd = document.getElementById('card'); cd.classList.remove('flip');
-      setTimeout(() => { loadSmartImg(document.getElementById('img'), cur.i, cur.n); document.getElementById('cardLabel').innerText = cur.n; cd.classList.add('flip'); }, 250);
+      setTimeout(() => { loadSmartImg(document.getElementById('img'), cur.i, cur.n); cd.classList.add('flip'); }, 250);
     }
   } else {
     document.getElementById('box').style.display = 'none'; vb.style.display = 'none'; document.getElementById('swapBar').style.display = 'block';
     document.getElementById('swaps').innerText = st.sw;
     if(st.fin) document.getElementById('swapBar').innerHTML = "🎉 Classement verrouillé !";
   }
+    const lbl = document.getElementById('cardLabel');
+  if (lbl && cur) lbl.innerText = cur.n;
+
 }
 
 function clickSlot(i) {
