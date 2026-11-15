@@ -17,6 +17,7 @@
   @keyframes fl { 0%,100% { transform: translateY(0) rotateY(-4deg); } 50% { transform: translateY(-8px) rotateY(4deg); } }
   
   .card { width: 100%; height: 100%; position: relative; transition: transform 0.7s; transform-style: preserve-3d; }
+  .card.tilting { transition: transform 0.08s ease-out; }
   .card.flip { transform: rotateY(180deg); }
   .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 14px; overflow: hidden; border: 3px solid #ef4444; box-shadow: 0 12px 30px rgba(239,68,68,0.4); }
   .back { background: radial-gradient(#ef4444, #7f1d1d); display: flex; align-items: center; justify-content: center; font-size: 50px; font-weight: bold; }
@@ -127,7 +128,28 @@ box.ondragend = () => {
   box.style.opacity = '1';
   document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over'));
 };
-box.onclick = () => document.getElementById('card').classList.toggle('flip');
+box.onclick = () => document.getElementById('card').classList.toggle('flip')
+  const boxEl = document.getElementById('box');
+const cardEl = document.getElementById('card');
+
+boxEl.addEventListener('mousemove', (e) => {
+  const rect = boxEl.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+
+  const rotateX = (0.5 - y) * 26;
+  const rotateY = (x - 0.5) * 26;
+  const baseFlip = cardEl.classList.contains('flip') ? 180 : 0;
+
+  cardEl.classList.add('tilting');
+  cardEl.style.transform = `rotateY(${baseFlip + rotateY}deg) rotateX(${rotateX}deg) scale(1.05)`;
+});
+
+boxEl.addEventListener('mouseleave', () => {
+  cardEl.classList.remove('tilting');
+  cardEl.style.transform = '';
+});
+;
 
 for(let i=0; i<50; i++) {
   const s = document.createElement('div'); s.className = 'slot'; s.id = 's'+i;
