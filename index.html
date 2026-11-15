@@ -27,7 +27,9 @@
   .mirror { position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 55%); pointer-events: none; z-index: 2; }
 
   .votes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 40px; margin-bottom: 15px; }
-  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; max-width: 1200px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; max-width: 1200px; margin: 0 auto; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+  body.dragging-active .grid { transform: translateY(-195px); }
+
   @media (max-width: 850px) { .grid { grid-template-columns: repeat(2, 1fr); } }
   
   .slot { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 7px; padding: 6px 8px; display: flex; align-items: center; cursor: pointer; min-height: 42px; transition: transform 0.2s, background 0.2s, border-color 0.2s; }
@@ -127,47 +129,59 @@ const card = document.getElementById('card');
 box.removeAttribute('draggable');
 let isDragging = false, dragMoved = false, startX = 0, startY = 0;
 
+let isDragging = false, dragMoved = false, startX = 0, startY = 0, startScrollY = 0, curX = 0, curY = 0;
+
+function updateDragPos() {
+  if (!isDragging || !dragMoved) return;
+  const dx = curX - startX;
+  const dy = (curY - startY) + (window.scrollY - startScrollY);
+  box.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+  document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over'));
+  const target = document.elementFromPoint(curX, curY)?.closest('.slot');
+  if (target && !target.classList.contains('filled')) target.classList.add('over');
+}
+
 box.onmousedown = e => {
   if (!st || st.swap || st.fin || e.button !== 0) return;
   e.preventDefault();
   window.getSelection()?.removeAllRanges();
-  isDragging = true; dragMoved = false; startX = e.clientX; startY = e.clientY;
-};
-
-box.onmousemove = e => {
-  if (isDragging) return;
-  const r = box.getBoundingClientRect();
-  const rx = (0.5 - (e.clientY - r.top) / r.height) * 26;
-  const ry = ((e.clientX - r.left) / r.width - 0.5) * 26;
-  const flip = card.classList.contains('flip') ? 180 : 0;
-  card.style.transition = 'transform 0.08s ease-out';
-  card.style.transform = 'rotateY(' + (flip + ry) + 'deg) rotateX(' + rx + 'deg) scale(1.05)';
-};
-
-box.onmouseleave = () => {
-  if (isDragging) return;
-  card.style.transition = 'transform 0.5s ease';
-  card.style.transform = '';
+  isDragging = true; dragMoved = false;
+  startX = curX = e.clientX;
+  startY = curY = e.clientY;
+  startScrollY = window.scrollY;
 };
 
 window.addEventListener('mousemove', e => {
   if (!isDragging) return;
   e.preventDefault();
-  if (!dragMoved && Math.hypot(e.clientX - startX, e.clientY - startY) > 6) {
+  curX = e.clientX; curY = e.clientY;
+  if (!dragMoved && Math.hypot(curX - startX, curY - startY) > 6) {
     dragMoved = true;
     box.classList.add('is-dragging');
+    document.body.classList.add('dragging-active');
     card.style.transition = 'none';
     card.style.transform = card.classList.contains('flip') ? 'rotateY(180deg)' : '';
   }
+  updateDragPos();
+});
+
+window.addEventListener('scroll', updateDragPos, { passive: true });
+
+window.addEventListener('mouseup', e => {
+  if (!isDragging) return;
+  isDragging = false;
   if (dragMoved) {
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    box.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+    box.classList.remove('is-dragging');
+    document.body.classList.remove('dragging-active');
+    box.style.transform = '';
     document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over'));
     const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.slot');
-    if (target && !target.classList.contains('filled')) target.classList.add('over');
+    if (target && !target.classList.contains('filled')) prop(parseInt(target.id.replace('s', ''), 10));
+  } else {
+    card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.toggle('flip');
   }
 });
+
 
 window.addEventListener('mouseup', e => {
   if (!isDragging) return;
