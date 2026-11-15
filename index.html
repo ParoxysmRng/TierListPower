@@ -105,7 +105,7 @@ function loadSmartImg(imgEl, basePath, label) {
     if (idx < exts.length) imgEl.src = clean + exts[idx];
     else { imgEl.onerror = null; imgEl.src = "https://placehold.co" + encodeURIComponent(label); }
   };
-  imgEl.src = clean + exts;
+  imgEl.src = clean + exts[0];
 }
 
 const BASE = "https://" + "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app/rooms/tierlist-power-prive";
@@ -117,36 +117,19 @@ const rgba = (h,a) => "rgba(" + parseInt(h.slice(1,3),16) + "," + parseInt(h.sli
 const box = document.getElementById('box');
 const card = document.getElementById('card');
 
-box.ondragstart = e => {
-  if (!st || st.swap || st.fin) { e.preventDefault(); return; }
-  e.dataTransfer.setData('text/plain', 'card');
-  box.style.opacity = '0.5';
-};
-box.ondragend = () => {
-  box.style.opacity = '1';
-  document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over'));
-};
-box.onclick = () => {
-  card.style.transition = 'transform 0.7s';
-  card.style.transform = '';
-  card.classList.toggle('flip');
-};
+box.ondragstart = e => { if (!st || st.swap || st.fin) { e.preventDefault(); return; } e.dataTransfer.setData('text/plain', 'card'); box.style.opacity = '0.5'; };
+box.ondragend = () => { box.style.opacity = '1'; document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over')); };
+box.onclick = () => { card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.toggle('flip'); };
 
 box.onmousemove = e => {
   const r = box.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width;
-  const y = (e.clientY - r.top) / r.height;
-  const rx = (0.5 - y) * 26;
-  const ry = (x - 0.5) * 26;
+  const rx = (0.5 - (e.clientY - r.top) / r.height) * 26;
+  const ry = ((e.clientX - r.left) / r.width - 0.5) * 26;
   const flip = card.classList.contains('flip') ? 180 : 0;
   card.style.transition = 'transform 0.08s ease-out';
   card.style.transform = 'rotateY(' + (flip + ry) + 'deg) rotateX(' + rx + 'deg) scale(1.05)';
 };
-
-box.onmouseleave = () => {
-  card.style.transition = 'transform 0.5s ease';
-  card.style.transform = '';
-};
+box.onmouseleave = () => { card.style.transition = 'transform 0.5s ease'; card.style.transform = ''; };
 
 for(let i=0; i<50; i++) {
   const s = document.createElement('div'); s.className = 'slot'; s.id = 's'+i;
@@ -157,7 +140,6 @@ for(let i=0; i<50; i++) {
   s.innerHTML = '<span class="rank">#' + (i+1) + '</span><img class="avatar" id="a' + i + '"><span id="n' + i + '" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">---</span><span class="tag" id="t' + i + '" style="display:none"></span>';
   document.getElementById('grid').appendChild(s);
 }
-
 async function save(data) { await fetch(DB_URL, { method: 'PUT', body: JSON.stringify(data) }); }
 async function patch(path, val) { await fetch(BASE + "/" + path + ".json", { method: 'PUT', body: JSON.stringify(val) }); }
 
@@ -186,19 +168,13 @@ async function forceInit() {
   st = fresh; render(); await save(fresh);
 }
 
-async function reset() {
-  if (pseudo.toLowerCase() !== 'paro') return;
-  await forceInit();
-}
+async function reset() { if (pseudo.toLowerCase() === 'paro') await forceInit(); }
 
 async function prop(i) {
   if(!st) return;
   st.pr = st.pr || {}; st.v = st.v || {};
   if(st.pr[id]?.s === i) { delete st.pr[id]; render(); await patch("pr/" + id, null); }
-  else {
-    st.pr[id] = {s:i, pseudo, color}; st.v[id] = i; render();
-    await patch("pr/" + id, {s:i, pseudo, color}); await patch("v/" + id, i);
-  }
+  else { st.pr[id] = {s:i, pseudo, color}; st.v[id] = i; render(); await patch("pr/" + id, {s:i, pseudo, color}); await patch("v/" + id, i); }
 }
 
 async function vote(i) {
