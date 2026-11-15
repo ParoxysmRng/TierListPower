@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Tier List Power - Top 50</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #090d16; color: #f8fafc; margin: 0; padding: 15px; text-align: center; }
+  .modal { position: fixed; inset: 0; background: rgba(9,13,22,0.95); z-index: 99; display: flex; align-items: center; justify-content: center; }
+  .box { background: #1e293b; border: 2px solid #ef4444; border-radius: 14px; padding: 25px; width: 320px; }
+  input[type="text"] { width: 90%; padding: 10px; margin: 8px 0 15px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; }
+  .bar { background: #1e293b; padding: 10px 15px; border-radius: 8px; max-width: 800px; margin: 0 auto 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .badge { padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px #000; }
+  
+  .scene { width: 235px; height: 325px; margin: 0 auto 12px; perspective: 1000px; cursor: grab; }
+  .scene:active { cursor: grabbing; }
+  .float { width: 100%; height: 100%; transform-style: preserve-3d; animation: fl 4s ease-in-out infinite; pointer-events: none; }
+  @keyframes fl { 0%,100% { transform: translateY(0) rotateY(-4deg); } 50% { transform: translateY(-8px) rotateY(4deg); } }
+  
+  .card { width: 100%; height: 100%; position: relative; transition: transform 0.7s; transform-style: preserve-3d; }
+  .card.tilting { transition: transform 0.08s ease-out; }
+  .card.flip { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 14px; overflow: hidden; border: 3px solid #ef4444; box-shadow: 0 12px 30px rgba(239,68,68,0.4); }
+  .back { background: radial-gradient(#ef4444, #7f1d1d); display: flex; align-items: center; justify-content: center; font-size: 50px; font-weight: bold; }
+  
+  .front { transform: rotateY(180deg); background: radial-gradient(circle, #1e293b 0%, #090d16 100%); display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; }
+  .front img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; pointer-events: none; display: block; }
+  .mirror { position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 55%); pointer-events: none; z-index: 2; }
+
+  .votes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 40px; margin-bottom: 15px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; max-width: 1200px; margin: 0 auto; }
+  @media (max-width: 850px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  
+  .slot { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 7px; padding: 6px 8px; display: flex; align-items: center; cursor: pointer; min-height: 42px; transition: transform 0.2s, background 0.2s, border-color 0.2s; }
+  .slot:hover:not(.filled) { transform: translateY(-2px); border-color: #94a3b8; }
+  .slot.over { transform: scale(1.06) translateY(-4px); border: 2px dashed #38bdf8; background: #0c4a6e; z-index: 10; }
+  .slot.filled { background: #0f172a; cursor: default; }
+  .slot.ghost { border: 2px dashed; }
+  .slot.sel { background: #f59e0b; color: #000; font-weight: bold; }
+  
+  .rank { font-weight: bold; color: #ef4444; width: 30px; font-size: 14px; text-align: left; pointer-events: none; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; object-position: center top; margin-right: 7px; display: none; pointer-events: none; }
+  .slot.filled .avatar, .slot.ghost .avatar { display: block; }
+  .tag { position: absolute; top: 2px; right: 5px; font-size: 10px; padding: 1px 5px; border-radius: 5px; font-weight: bold; pointer-events: none; }
+  button { background: #ef4444; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+  .card-label { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(9,13,22,0.95) 25%, transparent); padding: 24px 8px 10px; font-size: 18px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px #000000; z-index: 3; pointer-events: none; }
+</style>
+
+</style>
+</head>
+<body>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h2>🏆 Tier List Power</h2>
+    <input type="text" id="pseudo" placeholder="Ton pseudo" maxlength="15">
+    <div>Couleur : <input type="color" id="color" value="#38bdf8"></div><br>
+    <button id="btnJoin" style="width:100%; padding:12px;">Rejoindre la partie</button>
+  </div>
+</div>
+
+<h2>🏆 Tier List Power : Top 50</h2>
+<div class="bar">
+  <div id="players">En ligne : </div>
+  <div>
+    <span id="cnt" style="background:#ef4444; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">Carte 1/50</span>
+    <button id="btnReset" style="background:#475569; font-size:12px; display:none;">Nouvelle partie</button>
+  </div>
+</div>
+
+<div class="scene" id="box" draggable="true">
+  <div class="float">
+    <div class="card" id="card">
+      <div class="face back">?</div>
+      <div class="face front"><img id="img" src=""><div class="card-label" id="cardLabel">---</div></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="votes" id="votes"></div>
+<div id="swapBar" style="display:none; background:#f59e0b; color:#000; padding:10px; border-radius:8px; max-width:450px; margin:0 auto 15px; font-weight:bold;">
+  Swaps restants : <span id="swaps">5</span> <button id="btnEnd">Verrouiller</button>
+</div>
+<div class="grid" id="grid"></div>
+<script>
+const chars = [
+  {n:"Superman",i:"images/Superman"},{n:"Petit Buu",i:"images/PetitBuu"},{n:"Dark Vador",i:"images/DarkVador"},{n:"Meruem",i:"images/Meruem"},{n:"Son Goku",i:"images/SonGoku"},
+  {n:"Thanos",i:"images/Thanos"},{n:"Sauron",i:"images/Sauron"},{n:"Kratos",i:"images/Kratos"},{n:"Sephiroth",i:"images/Sephiroth"},{n:"Simon",i:"images/Simon"},
+  {n:"Naruto Uzumaki",i:"images/NarutoUzumaki"},{n:"Monkey D. Luffy",i:"images/MonkeyDLuffy"},{n:"Ichigo Kurosaki",i:"images/IchigoKurosaki"},{n:"Satoru Gojo",i:"images/SatoruGojo"},{n:"Mario",i:"images/Mario"},
+  {n:"Doom Slayer",i:"images/Doomslayer"},{n:"Batman",i:"images/Batman"},{n:"Seiya",i:"images/Seiya"},{n:"Thor",i:"images/Thor"},{n:"Hulk",i:"images/Hulk"},
+  {n:"Flash",i:"images/Flash"},{n:"Deadpool",i:"images/Deadpool"},{n:"Freezer",i:"images/Freezer"},{n:"Beerus",i:"images/Beerus"},{n:"Colonel Mustang",i:"images/ColonelMustang"},
+  {n:"Aizen Sosuke",i:"images/Aizen"},{n:"Mob",i:"images/Mob"},{n:"Tetsuo Shima",i:"images/Tetsuo"},{n:"Buuhan",i:"images/Buuhan"},{n:"Mewtwo",i:"images/Mewtwo"},
+  {n:"Arceus",i:"images/Arceus"},{n:"Gol D. Roger",i:"images/GolDRoger"},{n:"Ganondorf",i:"images/Ganondorf"},{n:"Geralt de Riv",i:"images/Geralt"},{n:"Dovahkiin",i:"images/Dovahkiin"},
+  {n:"L'Empereur (40K)",i:"images/Empereur40k"},{n:"Hao",i:"images/Hao"},{n:"Akainu",i:"images/Akainu"},{n:"Omni-Man",i:"images/OmniMan"},{n:"Ogrest",i:"images/Ogrest"},
+  {n:"Vayne",i:"images/Vayne"},{n:"Nocturne",i:"images/Nocturne"},{n:"Doctor Strange",i:"images/DoctorStrange"},{n:"Lee Sin",i:"images/LeeSin"},{n:"Garen",i:"images/Garen"},
+  {n:"Palpatine",i:"images/Palpatine"},{n:"Gandalf le Blanc",i:"images/Gandalf"},{n:"Voldemort",i:"images/Voldemort"},{n:"Eren Yeager",i:"images/Eren"},{n:"Guts",i:"images/Guts"}
+];
+
+function loadSmartImg(imgEl, basePath, label) {
+  const clean = basePath.replace(/\.(jpg|jpeg|png|webp)$/i, '');
+  const exts = ['.jpg', '.png', '.jpeg', '.webp', '.JPG', '.PNG'];
+  let idx = 0;
+  imgEl.onerror = () => {
+    idx++;
+    if (idx < exts.length) imgEl.src = clean + exts[idx];
+    else { imgEl.onerror = null; imgEl.src = "https://placehold.co" + encodeURIComponent(label); }
+  };
+  imgEl.src = clean + exts[0];
+}
+
+const BASE = "https://" + "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app/rooms/tierlist-power-prive";
+const DB_URL = BASE + ".json";
+const id = 'p_' + Math.random().toString(36).slice(2,8);
+let pseudo = "Joueur", color = "#38bdf8", st = null, sel = null, last = -1;
+const rgba = (h,a) => "rgba(" + parseInt(h.slice(1,3),16) + "," + parseInt(h.slice(3,5),16) + "," + parseInt(h.slice(5,7),16) + "," + a + ")";
+
+const box = document.getElementById('box');
+const card = document.getElementById('card');
+
+box.ondragstart = e => { if (!st || st.swap || st.fin) { e.preventDefault(); return; } e.dataTransfer.setData('text/plain', 'card'); box.style.opacity = '0.5'; };
+box.ondragend = () => { box.style.opacity = '1'; document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over')); };
+box.onclick = () => { card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.toggle('flip'); };
+
+box.onmousemove = e => {
+  const r = box.getBoundingClientRect();
+  const rx = (0.5 - (e.clientY - r.top) / r.height) * 26;
+  const ry = ((e.clientX - r.left) / r.width - 0.5) * 26;
+  const flip = card.classList.contains('flip') ? 180 : 0;
+  card.style.transition = 'transform 0.08s ease-out';
+  card.style.transform = 'rotateY(' + (flip + ry) + 'deg) rotateX(' + rx + 'deg) scale(1.05)';
+};
+box.onmouseleave = () => { card.style.transition = 'transform 0.5s ease'; card.style.transform = ''; };
+
+for(let i=0; i<50; i++) {
+  const s = document.createElement('div'); s.className = 'slot'; s.id = 's'+i;
+  s.onclick = () => clickSlot(i);
+  s.ondragover = e => { if(st && !st.swap && !st.fin && !st.b?.[i]) { e.preventDefault(); s.classList.add('over'); } };
+  s.ondragleave = () => s.classList.remove('over');
+  s.ondrop = e => { e.preventDefault(); s.classList.remove('over'); if(st && !st.swap && !st.fin && !st.b?.[i]) prop(i); };
+  s.innerHTML = '<span class="rank">#' + (i+1) + '</span><img class="avatar" id="a' + i + '"><span id="n' + i + '" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">---</span><span class="tag" id="t' + i + '" style="display:none"></span>';
+  document.getElementById('grid').appendChild(s);
+}
+async function save(data) { await fetch(DB_URL, { method: 'PUT', body: JSON.stringify(data) }); }
+async function patch(path, val) { await fetch(BASE + "/" + path + ".json", { method: 'PUT', body: JSON.stringify(val) }); }
+
+document.getElementById('btnReset').onclick = reset;
+document.getElementById('btnEnd').onclick = () => patch('fin', true);
+document.getElementById('btnJoin').onclick = async () => {
+  pseudo = document.getElementById('pseudo').value.trim() || "Joueur";
+  color = document.getElementById('color').value;
+  document.getElementById('modal').style.display = 'none';
+  if (pseudo.toLowerCase() === 'paro') document.getElementById('btnReset').style.display = 'inline-block';
+  await patch("p/" + id, {pseudo, color});
+  await sync();
+  setInterval(sync, 1200);
+};
+
+async function sync() {
+  try {
+    const r = await fetch(DB_URL); const data = await r.json();
+    if(!data || !data.d) await forceInit(); else { st = data; render(); }
+  } catch(e) {}
+}
+
+async function forceInit() {
+  last = -1; sel = null;
+  const fresh = { d: [...chars].sort(()=>Math.random()-0.5), b:{}, p:{[id]:{pseudo,color}}, pr:{}, v:{}, idx:0, swap:false, sw:5, fin:false };
+  st = fresh; render(); await save(fresh);
+}
+
+async function reset() { if (pseudo.toLowerCase() === 'paro') await forceInit(); }
+
+async function prop(i) {
+  if(!st) return;
+  st.pr = st.pr || {}; st.v = st.v || {};
+  if(st.pr[id]?.s === i) { delete st.pr[id]; render(); await patch("pr/" + id, null); }
+  else { st.pr[id] = {s:i, pseudo, color}; st.v[id] = i; render(); await patch("pr/" + id, {s:i, pseudo, color}); await patch("v/" + id, i); }
+}
+
+async function vote(i) {
+  st.v = st.v || {};
+  const nv = st.v[id] === i ? null : i;
+  if(nv === null) delete st.v[id]; else st.v[id] = nv;
+  const tot = Object.keys(st.p||{}).length || 1;
+  const cnt = Object.values(st.v).filter(v=>v===i).length;
+  if(cnt >= Math.floor(tot/2)+1) {
+    const ni = st.idx + 1;
+    st.b = st.b || {}; st.b[i] = st.d[st.idx]; st.idx = ni; st.pr = {}; st.v = {}; st.swap = ni>=50;
+    render(); await save(st);
+  } else { render(); await patch("v/" + id, nv); }
+}
+
+function render() {
+  document.getElementById('players').innerHTML = 'En ligne : ' + Object.values(st.p||{}).map(x=>'<span class="badge" style="background:' + x.color + '">' + x.pseudo + '</span>').join(' ');
+  const cur = st.d[st.idx], bySlot = {};
+  Object.values(st.pr||{}).forEach(x => { if(x && typeof x.s === 'number' && !st.b?.[x.s]) (bySlot[x.s] = bySlot[x.s]||[]).push(x); });
+
+  for(let i=0; i<50; i++) {
+    const s = document.getElementById('s'+i), n = document.getElementById('n'+i), a = document.getElementById('a'+i), t = document.getElementById('t'+i), c = st.b?.[i];
+    s.className = 'slot' + (sel===i?' sel':''); s.style.background = ''; s.style.borderColor = ''; t.style.display = 'none';
+    if(c) { s.classList.add('filled'); n.innerText = c.n; if(a.dataset.k !== c.i) { a.dataset.k = c.i; loadSmartImg(a, c.i, c.n); } }
+    else if(!st.swap && bySlot[i] && cur) {
+      const m = bySlot[i][bySlot[i].length-1];
+      s.classList.add('ghost'); s.style.background = rgba(m.color, 0.22); s.style.borderColor = m.color;
+      n.innerText = cur.n; if(a.dataset.k !== cur.i) { a.dataset.k = cur.i; loadSmartImg(a, cur.i, cur.n); }
+      t.style.display = 'block'; t.style.background = m.color; t.innerText = bySlot[i].map(x=>x.pseudo).join(', ');
+    } else { n.innerText = '---'; a.dataset.k = ''; }
+  }
+
+  const vb = document.getElementById('votes');
+  if(!st.swap) {
+    box.style.display = 'block'; vb.style.display = 'flex'; document.getElementById('swapBar').style.display = 'none';
+    document.getElementById('cnt').innerText = 'Carte ' + (st.idx+1) + '/50'; vb.innerHTML = '';
+    const maj = Math.floor((Object.keys(st.p||{}).length||1)/2)+1;
+    Object.entries(bySlot).forEach(([k, arr]) => {
+      const idx = +k, vc = Object.values(st.v||{}).filter(v=>v===idx).length, m = arr[arr.length-1];
+      const b = document.createElement('button'); b.style.border = '2px solid ' + m.color;
+      b.style.background = st.v?.[id]===idx ? rgba(m.color,0.4) : '#1e293b';
+      b.innerHTML = '✔ Confirmer #' + (idx+1) + ' (' + arr.map(x=>x.pseudo).join('&') + ') [' + vc + '/' + maj + ']';
+      b.onclick = () => vote(idx); vb.appendChild(b);
+    });
+    if(last !== st.idx) {
+      last = st.idx; card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.remove('flip');
+      setTimeout(() => {
+        loadSmartImg(document.getElementById('img'), cur.i, cur.n);
+        const lbl = document.getElementById('cardLabel');
+        if (lbl) lbl.innerText = cur.n;
+        card.classList.add('flip');
+      }, 250);
+    }
+  } else {
+    box.style.display = 'none'; vb.style.display = 'none'; document.getElementById('swapBar').style.display = 'block';
+    document.getElementById('swaps').innerText = st.sw;
+    if(st.fin) document.getElementById('swapBar').innerHTML = "🎉 Classement verrouillé !";
+  }
+}
+
+function clickSlot(i) {
+  if(!st || st.fin) return;
+  if(!st.swap) { if(!st.b?.[i]) prop(i); }
+  else if(st.sw > 0) {
+    if(sel === null) { sel = i; render(); }
+    else if(sel === i) { sel = null; render(); }
+    else {
+      const b = {...st.b}; [b[sel], b[i]] = [b[i], b[sel]]; sel = null;
+      st.b = b; st.sw = st.sw-1; st.fin = st.sw===0; render(); save(st);
+    }
+  }
+}
+</script>
+</body>
+</html>
