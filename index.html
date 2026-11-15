@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Tier List Power - Top 50</title>
 <style>
-  body { font-family: 'Segoe UI', sans-serif; background: #090d16; color: #f8fafc; margin: 0; padding: 15px; text-align: center; }
+  body { font-family: 'Segoe UI', sans-serif; background: #090d16; color: #f8fafc; margin: 0; padding: 15px; text-align: center; user-select: none; }
   .modal { position: fixed; inset: 0; background: rgba(9,13,22,0.95); z-index: 99; display: flex; align-items: center; justify-content: center; }
   .box { background: #1e293b; border: 2px solid #ef4444; border-radius: 14px; padding: 25px; width: 320px; }
   input[type="text"] { width: 90%; padding: 10px; margin: 8px 0 15px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; }
@@ -13,18 +13,20 @@
   
   .scene { width: 235px; height: 325px; margin: 0 auto 12px; perspective: 1000px; cursor: grab; }
   .scene:active { cursor: grabbing; }
+  .scene.is-dragging { position: fixed; z-index: 9999; margin: 0; pointer-events: none; transform: translate(-50%, -50%) scale(0.38); transition: transform 0.12s ease-out; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.85)); }
+  .scene.is-dragging .float { animation: none; }
+
   .float { width: 100%; height: 100%; transform-style: preserve-3d; animation: fl 4s ease-in-out infinite; pointer-events: none; }
   @keyframes fl { 0%,100% { transform: translateY(0) rotateY(-4deg); } 50% { transform: translateY(-8px) rotateY(4deg); } }
   
   .card { width: 100%; height: 100%; position: relative; transition: transform 0.7s; transform-style: preserve-3d; }
-  .card.tilting { transition: transform 0.08s ease-out; }
   .card.flip { transform: rotateY(180deg); }
   .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 14px; overflow: hidden; border: 3px solid #ef4444; box-shadow: 0 12px 30px rgba(239,68,68,0.4); }
   .back { background: radial-gradient(#ef4444, #7f1d1d); display: flex; align-items: center; justify-content: center; font-size: 50px; font-weight: bold; }
   
   .front { transform: rotateY(180deg); background: radial-gradient(circle, #1e293b 0%, #090d16 100%); display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; }
   .front img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; pointer-events: none; display: block; }
-  .mirror { position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 55%); pointer-events: none; z-index: 2; }
+  .card-label { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(9,13,22,0.95) 25%, transparent); padding: 24px 8px 10px; font-size: 18px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px #000000; z-index: 3; pointer-events: none; }
 
   .votes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 40px; margin-bottom: 15px; }
   .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; max-width: 1200px; margin: 0 auto; }
@@ -42,20 +44,6 @@
   .slot.filled .avatar, .slot.ghost .avatar { display: block; }
   .tag { position: absolute; top: 2px; right: 5px; font-size: 10px; padding: 1px 5px; border-radius: 5px; font-weight: bold; pointer-events: none; }
   button { background: #ef4444; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-  .card-label { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(9,13,22,0.95) 25%, transparent); padding: 24px 8px 10px; font-size: 18px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px #000000; z-index: 3; pointer-events: none; }
-  .scene.is-dragging {
-    position: fixed;
-    z-index: 9999;
-    margin: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.38);
-    transition: transform 0.12s ease-out;
-    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.85));
-  }
-  .scene.is-dragging .float { animation: none; }
-
-</style>
-
 </style>
 </head>
 <body>
@@ -78,12 +66,11 @@
   </div>
 </div>
 
-<div class="scene" id="box" draggable="true">
+<div class="scene" id="box">
   <div class="float">
     <div class="card" id="card">
       <div class="face back">?</div>
       <div class="face front"><img id="img" src=""><div class="card-label" id="cardLabel">---</div></div>
-
     </div>
   </div>
 </div>
@@ -116,7 +103,7 @@ function loadSmartImg(imgEl, basePath, label) {
     if (idx < exts.length) imgEl.src = clean + exts[idx];
     else { imgEl.onerror = null; imgEl.src = "https://placehold.co" + encodeURIComponent(label); }
   };
-  imgEl.src = clean + exts[0];
+  imgEl.src = clean + exts;
 }
 
 const BASE = "https://" + "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app/rooms/tierlist-power-prive";
@@ -127,14 +114,27 @@ const rgba = (h,a) => "rgba(" + parseInt(h.slice(1,3),16) + "," + parseInt(h.sli
 
 const box = document.getElementById('box');
 const card = document.getElementById('card');
-
-box.removeAttribute('draggable');
 let isDragging = false, dragMoved = false, startX = 0, startY = 0;
 
 box.onmousedown = e => {
   if (!st || st.swap || st.fin || e.button !== 0) return;
-  isDragging = true; dragMoved = false;
-  startX = e.clientX; startY = e.clientY;
+  isDragging = true; dragMoved = false; startX = e.clientX; startY = e.clientY;
+};
+
+box.onmousemove = e => {
+  if (isDragging) return;
+  const r = box.getBoundingClientRect();
+  const rx = (0.5 - (e.clientY - r.top) / r.height) * 26;
+  const ry = ((e.clientX - r.left) / r.width - 0.5) * 26;
+  const flip = card.classList.contains('flip') ? 180 : 0;
+  card.style.transition = 'transform 0.08s ease-out';
+  card.style.transform = 'rotateY(' + (flip + ry) + 'deg) rotateX(' + rx + 'deg) scale(1.05)';
+};
+
+box.onmouseleave = () => {
+  if (isDragging) return;
+  card.style.transition = 'transform 0.5s ease';
+  card.style.transform = '';
 };
 
 window.addEventListener('mousemove', e => {
@@ -162,31 +162,15 @@ window.addEventListener('mouseup', e => {
     box.style.left = ''; box.style.top = '';
     document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over'));
     const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.slot');
-    if (target && !target.classList.contains('filled')) {
-      prop(parseInt(target.id.replace('s', ''), 10));
-    }
+    if (target && !target.classList.contains('filled')) prop(parseInt(target.id.replace('s', ''), 10));
   } else {
     card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.toggle('flip');
   }
 });
 
-
-box.onmousemove = e => {
-  const r = box.getBoundingClientRect();
-  const rx = (0.5 - (e.clientY - r.top) / r.height) * 26;
-  const ry = ((e.clientX - r.left) / r.width - 0.5) * 26;
-  const flip = card.classList.contains('flip') ? 180 : 0;
-  card.style.transition = 'transform 0.08s ease-out';
-  card.style.transform = 'rotateY(' + (flip + ry) + 'deg) rotateX(' + rx + 'deg) scale(1.05)';
-};
-box.onmouseleave = () => { card.style.transition = 'transform 0.5s ease'; card.style.transform = ''; };
-
 for(let i=0; i<50; i++) {
   const s = document.createElement('div'); s.className = 'slot'; s.id = 's'+i;
   s.onclick = () => clickSlot(i);
-  s.ondragover = e => { if(st && !st.swap && !st.fin && !st.b?.[i]) { e.preventDefault(); s.classList.add('over'); } };
-  s.ondragleave = () => s.classList.remove('over');
-  s.ondrop = e => { e.preventDefault(); s.classList.remove('over'); if(st && !st.swap && !st.fin && !st.b?.[i]) prop(i); };
   s.innerHTML = '<span class="rank">#' + (i+1) + '</span><img class="avatar" id="a' + i + '"><span id="n' + i + '" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">---</span><span class="tag" id="t' + i + '" style="display:none"></span>';
   document.getElementById('grid').appendChild(s);
 }
@@ -273,8 +257,7 @@ function render() {
       last = st.idx; card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.remove('flip');
       setTimeout(() => {
         loadSmartImg(document.getElementById('img'), cur.i, cur.n);
-        const lbl = document.getElementById('cardLabel');
-        if (lbl) lbl.innerText = cur.n;
+        document.getElementById('cardLabel').innerText = cur.n;
         card.classList.add('flip');
       }, 250);
     }
