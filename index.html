@@ -102,14 +102,10 @@ function loadSmartImg(imgEl, basePath, label) {
   let idx = 0;
   imgEl.onerror = () => {
     idx++;
-    if (idx < exts.length) {
-      imgEl.src = clean + exts[idx];
-    } else {
-      imgEl.onerror = null;
-      imgEl.src = "https://placehold.co" + encodeURIComponent(label);
-    }
+    if (idx < exts.length) imgEl.src = clean + exts[idx];
+    else { imgEl.onerror = null; imgEl.src = "https://placehold.co" + encodeURIComponent(label); }
   };
-  imgEl.src = clean + exts[0];
+  imgEl.src = clean + exts;
 }
 
 const BASE = "https://" + "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app/rooms/tierlist-power-prive";
@@ -119,6 +115,8 @@ let pseudo = "Joueur", color = "#38bdf8", st = null, sel = null, last = -1;
 const rgba = (h,a) => "rgba(" + parseInt(h.slice(1,3),16) + "," + parseInt(h.slice(3,5),16) + "," + parseInt(h.slice(5,7),16) + "," + a + ")";
 
 const box = document.getElementById('box');
+const card = document.getElementById('card');
+
 box.ondragstart = e => {
   if (!st || st.swap || st.fin) { e.preventDefault(); return; }
   e.dataTransfer.setData('text/plain', 'card');
@@ -128,28 +126,27 @@ box.ondragend = () => {
   box.style.opacity = '1';
   document.querySelectorAll('.slot.over').forEach(el => el.classList.remove('over'));
 };
-box.onclick = () => document.getElementById('card').classList.toggle('flip')
-  const boxEl = document.getElementById('box');
-const cardEl = document.getElementById('card');
+box.onclick = () => {
+  card.style.transition = 'transform 0.7s';
+  card.style.transform = '';
+  card.classList.toggle('flip');
+};
 
-boxEl.addEventListener('mousemove', (e) => {
-  const rect = boxEl.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top) / rect.height;
+box.onmousemove = e => {
+  const r = box.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width;
+  const y = (e.clientY - r.top) / r.height;
+  const rx = (0.5 - y) * 26;
+  const ry = (x - 0.5) * 26;
+  const flip = card.classList.contains('flip') ? 180 : 0;
+  card.style.transition = 'transform 0.08s ease-out';
+  card.style.transform = 'rotateY(' + (flip + ry) + 'deg) rotateX(' + rx + 'deg) scale(1.05)';
+};
 
-  const rotateX = (0.5 - y) * 26;
-  const rotateY = (x - 0.5) * 26;
-  const baseFlip = cardEl.classList.contains('flip') ? 180 : 0;
-
-  cardEl.classList.add('tilting');
-  cardEl.style.transform = `rotateY(${baseFlip + rotateY}deg) rotateX(${rotateX}deg) scale(1.05)`;
-});
-
-boxEl.addEventListener('mouseleave', () => {
-  cardEl.classList.remove('tilting');
-  cardEl.style.transform = '';
-});
-;
+box.onmouseleave = () => {
+  card.style.transition = 'transform 0.5s ease';
+  card.style.transform = '';
+};
 
 for(let i=0; i<50; i++) {
   const s = document.createElement('div'); s.className = 'slot'; s.id = 's'+i;
@@ -170,9 +167,7 @@ document.getElementById('btnJoin').onclick = async () => {
   pseudo = document.getElementById('pseudo').value.trim() || "Joueur";
   color = document.getElementById('color').value;
   document.getElementById('modal').style.display = 'none';
-  if (pseudo.toLowerCase() === 'paro') {
-    document.getElementById('btnReset').style.display = 'inline-block';
-  }
+  if (pseudo.toLowerCase() === 'paro') document.getElementById('btnReset').style.display = 'inline-block';
   await patch("p/" + id, {pseudo, color});
   await sync();
   setInterval(sync, 1200);
@@ -199,13 +194,10 @@ async function reset() {
 async function prop(i) {
   if(!st) return;
   st.pr = st.pr || {}; st.v = st.v || {};
-  if(st.pr[id]?.s === i) {
-    delete st.pr[id]; render(); await patch("pr/" + id, null);
-  } else {
-    st.pr[id] = {s:i, pseudo, color}; st.v[id] = i;
-    render();
-    await patch("pr/" + id, {s:i, pseudo, color});
-    await patch("v/" + id, i);
+  if(st.pr[id]?.s === i) { delete st.pr[id]; render(); await patch("pr/" + id, null); }
+  else {
+    st.pr[id] = {s:i, pseudo, color}; st.v[id] = i; render();
+    await patch("pr/" + id, {s:i, pseudo, color}); await patch("v/" + id, i);
   }
 }
 
@@ -219,9 +211,7 @@ async function vote(i) {
     const ni = st.idx + 1;
     st.b = st.b || {}; st.b[i] = st.d[st.idx]; st.idx = ni; st.pr = {}; st.v = {}; st.swap = ni>=50;
     render(); await save(st);
-  } else {
-    render(); await patch("v/" + id, nv);
-  }
+  } else { render(); await patch("v/" + id, nv); }
 }
 
 function render() {
@@ -239,12 +229,11 @@ function render() {
       n.innerText = cur.n; if(a.dataset.k !== cur.i) { a.dataset.k = cur.i; loadSmartImg(a, cur.i, cur.n); }
       t.style.display = 'block'; t.style.background = m.color; t.innerText = bySlot[i].map(x=>x.pseudo).join(', ');
     } else { n.innerText = '---'; a.dataset.k = ''; }
-    
   }
 
   const vb = document.getElementById('votes');
   if(!st.swap) {
-    document.getElementById('box').style.display = 'block'; vb.style.display = 'flex'; document.getElementById('swapBar').style.display = 'none';
+    box.style.display = 'block'; vb.style.display = 'flex'; document.getElementById('swapBar').style.display = 'none';
     document.getElementById('cnt').innerText = 'Carte ' + (st.idx+1) + '/50'; vb.innerHTML = '';
     const maj = Math.floor((Object.keys(st.p||{}).length||1)/2)+1;
     Object.entries(bySlot).forEach(([k, arr]) => {
@@ -255,17 +244,19 @@ function render() {
       b.onclick = () => vote(idx); vb.appendChild(b);
     });
     if(last !== st.idx) {
-      last = st.idx; const cd = document.getElementById('card'); cd.classList.remove('flip');
-      setTimeout(() => { loadSmartImg(document.getElementById('img'), cur.i, cur.n); cd.classList.add('flip'); }, 250);
+      last = st.idx; card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.remove('flip');
+      setTimeout(() => {
+        loadSmartImg(document.getElementById('img'), cur.i, cur.n);
+        const lbl = document.getElementById('cardLabel');
+        if (lbl) lbl.innerText = cur.n;
+        card.classList.add('flip');
+      }, 250);
     }
   } else {
-    document.getElementById('box').style.display = 'none'; vb.style.display = 'none'; document.getElementById('swapBar').style.display = 'block';
+    box.style.display = 'none'; vb.style.display = 'none'; document.getElementById('swapBar').style.display = 'block';
     document.getElementById('swaps').innerText = st.sw;
     if(st.fin) document.getElementById('swapBar').innerHTML = "🎉 Classement verrouillé !";
   }
-    const lbl = document.getElementById('cardLabel');
-  if (lbl && cur) lbl.innerText = cur.n;
-
 }
 
 function clickSlot(i) {
