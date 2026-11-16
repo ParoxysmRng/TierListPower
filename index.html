@@ -208,7 +208,11 @@ for(let i=0; i<50; i++) {
   s.innerHTML = '<span class="rank">#' + (i+1) + '</span><img class="avatar" id="a' + i + '"><span id="n' + i + '" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">---</span><span class="tag" id="t' + i + '" style="display:none"></span>';
   document.getElementById('grid').appendChild(s);
 }
-async function save(data) { await fetch(DB_URL, { method: 'PUT', body: JSON.stringify(data) }); }
+async function save(data) {
+  const { p, ...gameData } = data;
+  await fetch(DB_URL, { method: 'PATCH', body: JSON.stringify(gameData) });
+}
+
 async function patch(path, val) { await fetch(BASE + "/" + path + ".json", { method: 'PUT', body: JSON.stringify(val) }); }
 
 document.getElementById('btnReset').onclick = reset;
@@ -329,8 +333,8 @@ function render() {
       b.innerHTML = '✔ Confirmer #' + (idx+1) + ' (' + arr.map(x=>x.pseudo).join('&') + ') [' + vc + '/' + maj + ']';
       b.onclick = () => vote(idx); vb.appendChild(b);
     });
-    if(last !== st.idx) {
-      last = st.idx; card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.remove('flip');
+    if(last !== cur.n) {
+      last = cur.n; card.style.transition = 'transform 0.7s'; card.style.transform = ''; card.classList.remove('flip');
       setTimeout(() => {
         loadSmartImg(document.getElementById('img'), cur.i, cur.n);
         const lbl = document.getElementById('cardLabel');
