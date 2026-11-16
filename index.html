@@ -116,7 +116,9 @@ function loadSmartImg(imgEl, basePath, label) {
   imgEl.src = clean + exts[0];
 }
 
-const BASE = "https://" + "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app/rooms/tierlist-power-prive";
+const DB_HOST = "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app";
+const BASE = "https://" + DB_HOST + "/rooms/tierlist-power-prive";
+
 const DB_URL = BASE + ".json";
 const id = sessionStorage.getItem('tp_id') || ('p_' + Math.random().toString(36).slice(2,8));
 sessionStorage.setItem('tp_id', id);
