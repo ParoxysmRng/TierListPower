@@ -234,32 +234,31 @@ document.getElementById('btnJoin').onclick = async () => {
 
 async function sync() {
   try {
-    const r = await fetch(DB_URL); const data = await r.json();
-    if(!data || !data.d) await forceInit(); 
-    else { 
-      st = data; 
-      const now = Date.now();
-      // Met à jour sa propre présence
-      await patch("p/" + id, {pseudo, color, t: Date.now});
-      // Supprime les joueurs inactifs depuis plus de 5 secondes
-      if (st.p) {
-        for (const [pid, pdata] of Object.entries(st.p)) {
-          if (pid !== id && (!pdata.t || now - pdata.t > 5000)) {
-            delete st.p[pid];
-            patch("p/" + pid, null);
-          }
-        }
+    const r = await fetch(DB_URL);
+    const data = await r.json();
+    if (!data || !data.d) {
+      await forceInit();
+    } else {
+      st = data;
+      if (!st.p || !st.p[id]) {
+        st.p = st.p || {};
+        st.p[id] = { pseudo, color };
+        await patch("p/" + id, { pseudo, color });
       }
-      render(); 
+      render();
     }
   } catch(e) {}
 }
 
+
 async function forceInit() {
   last = -1; sel = null;
-  const fresh = { d: [...chars].sort(()=>Math.random()-0.5), b:{}, p:{[id]:{pseudo,color}}, pr:{}, v:{}, idx:0, swap:false, sw:5, fin:false };
+  const keepPlayers = (st && st.p) ? st.p : {};
+  keepPlayers[id] = { pseudo, color };
+  const fresh = { d: [...chars].sort(()=>Math.random()-0.5), b:{}, p: keepPlayers, pr:{}, v:{}, idx:0, swap:false, sw:5, fin:false };
   st = fresh; render(); await save(fresh);
 }
+
 
 async function reset() { if (pseudo.toLowerCase() === 'paro') await forceInit(); }
 
