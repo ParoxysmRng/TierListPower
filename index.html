@@ -117,7 +117,8 @@ function loadSmartImg(imgEl, basePath, label) {
 
 const BASE = "https://" + "mauvaisefoi-tierlistpower-default-rtdb.europe-west1.firebasedatabase.app/rooms/tierlist-power-prive";
 const DB_URL = BASE + ".json";
-const id = 'p_' + Math.random().toString(36).slice(2,8);
+const id = sessionStorage.getItem('tp_id') || ('p_' + Math.random().toString(36).slice(2,8));
+sessionStorage.setItem('tp_id', id);
 let pseudo = "Joueur", color = "#38bdf8", st = null, sel = null, last = -1;
 const rgba = (h,a) => "rgba(" + parseInt(h.slice(1,3),16) + "," + parseInt(h.slice(3,5),16) + "," + parseInt(h.slice(5,7),16) + "," + a + ")";
 
@@ -213,7 +214,7 @@ document.getElementById('btnJoin').onclick = async () => {
   color = document.getElementById('color').value;
   document.getElementById('modal').style.display = 'none';
   if (pseudo.toLowerCase() === 'paro') document.getElementById('btnReset').style.display = 'inline-block';
-  await patch("p/" + id, {pseudo, color});
+  await patch("p/" + id, {pseudo, color, t: Date.now()});
   await sync();
   setInterval(sync, 1200);
 };
@@ -224,10 +225,17 @@ async function sync() {
     if(!data || !data.d) await forceInit(); 
     else { 
       st = data; 
-      if (!st.p || !st.p[id]) {
-        st.p = st.p || {};
-        st.p[id] = {pseudo, color};
-        await patch("p/" + id, {pseudo, color});
+      const now = Date.now();
+      // Met à jour sa propre présence
+      await patch("p/" + id, {pseudo, color, t: Date.now});
+      // Supprime les joueurs inactifs depuis plus de 5 secondes
+      if (st.p) {
+        for (const [pid, pdata] of Object.entries(st.p)) {
+          if (pid !== id && (!pdata.t || now - pdata.t > 5000)) {
+            delete st.p[pid];
+            patch("p/" + pid, null);
+          }
+        }
       }
       render(); 
     }
