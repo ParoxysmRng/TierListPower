@@ -70,6 +70,7 @@
   <div id="players">En ligne : </div>
   <div>
     <span id="cnt" style="background:#ef4444; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">Carte 1/50</span>
+    <button id="btnCopy" style="background:#0284c7; font-size:12px;">🔗 Inviter</button>
     <button id="btnReset" style="background:#475569; font-size:12px; display:none;">Nouvelle partie</button>
   </div>
 </div>
@@ -208,6 +209,18 @@ async function save(data) { await fetch(DB_URL, { method: 'PUT', body: JSON.stri
 async function patch(path, val) { await fetch(BASE + "/" + path + ".json", { method: 'PUT', body: JSON.stringify(val) }); }
 
 document.getElementById('btnReset').onclick = reset;
+  document.getElementById('btnCopy').onclick = () => {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.innerText = '✔ Lien copié !';
+    btn.style.background = '#16a34a';
+    setTimeout(() => {
+      btn.innerText = '🔗 Inviter';
+      btn.style.background = '#0284c7';
+    }, 2000);
+  });
+};
+
 document.getElementById('btnEnd').onclick = () => patch('fin', true);
 document.getElementById('btnJoin').onclick = async () => {
   pseudo = document.getElementById('pseudo').value.trim() || "Joueur";
