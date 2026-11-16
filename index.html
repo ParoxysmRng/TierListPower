@@ -221,7 +221,16 @@ document.getElementById('btnJoin').onclick = async () => {
 async function sync() {
   try {
     const r = await fetch(DB_URL); const data = await r.json();
-    if(!data || !data.d) await forceInit(); else { st = data; render(); }
+    if(!data || !data.d) await forceInit(); 
+    else { 
+      st = data; 
+      if (!st.p || !st.p[id]) {
+        st.p = st.p || {};
+        st.p[id] = {pseudo, color};
+        await patch("p/" + id, {pseudo, color});
+      }
+      render(); 
+    }
   } catch(e) {}
 }
 
